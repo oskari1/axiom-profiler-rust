@@ -2,3 +2,9 @@
 /.vscode
 /out
 /outstorage
+leetcode.rs
+output2.dot
+output2.svg
+output.svg
+run_all.bash
+run-results.txt
