@@ -1,0 +1,6 @@
+FILE logs/heaps-simpler3.log
+REUSE false
+VERBOSE false
+ENABLE_IO true
+FILTER line_no
+NUMBER_INST 250
