@@ -81,7 +81,7 @@ fn filter_graph_line_no(node_list: BTreeSet<InstNode>, edge_list: BTreeSet<InstE
     let index = edge_list_result.iter()
     .map(|e| e.node2)
     .collect::<Vec<usize>>()
-    .binary_search(&node_list_result.last().unwrap().line_no)
+    .binary_search(&node_list_result.last().unwrap().line_no) // unwrap can fail
     .unwrap_or_else(|index| index);
     let index = std::cmp::min(index + 1, edge_list_result.len());
     (BTreeSet::from_iter(node_list_result), BTreeSet::from_iter(edge_list_result[..index].to_owned()))

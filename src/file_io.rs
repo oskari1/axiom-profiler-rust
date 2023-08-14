@@ -40,12 +40,13 @@ pub fn open_file_truncate(filename: &str) -> BufWriter<File> {
                     .open(filename).unwrap_or_else(|_| panic!("Error opening {}", filename)))
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Settings {
     pub file: String,
     pub reuse: bool,
     pub verbose: bool,
-    pub enable_io: bool
+    pub enable_io: bool,
+    pub timeout: f32,
 }
 
 
@@ -55,19 +56,23 @@ pub fn get_settings() -> Settings {
     let mut settings = Settings::default();
     for line in settings_text.lines() {
         let line_split: Vec<&str> = line.split(' ').collect();
-        match line_split[0] {
+        let (setting_type, value) = (line_split[0], line_split[1]);
+        match setting_type {
             "FILE" => {
-                settings.file = line_split[1].to_string();
+                settings.file = value.to_string();
             },
             "REUSE" => {
-                settings.reuse = line_split[1].parse().unwrap();
+                settings.reuse = value.parse().unwrap();
             },
             "VERBOSE" => {
-                settings.verbose = line_split[1].parse().unwrap();
+                settings.verbose = value.parse().unwrap();
             },
             "ENABLE_IO" => {
-                settings.enable_io = line_split[1].parse().unwrap();
+                settings.enable_io = value.parse().unwrap();
             },
+            "TIMEOUT" => {
+                settings.timeout = value.parse().unwrap();
+            }
             _ => {}
         }
     }

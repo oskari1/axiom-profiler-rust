@@ -15,7 +15,7 @@ pub trait Print: Debug {
     }
 }
 
-#[derive(Debug, Hash, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct Ident {
     pub namespace: String,
     pub num: usize,
@@ -24,7 +24,7 @@ pub struct Ident {
 
 impl Print for Ident {
     fn format(&self) -> String where Self: Debug {
-        format!("{}#{}_{}", self.namespace, self.num, self.reuse_num)
+        format!("{}#{}#{}", self.namespace, self.num, self.reuse_num)
     }
 }
 
@@ -74,6 +74,18 @@ impl Term {
 }
 
 #[derive(Debug, PartialEq, Default)]
+pub struct RcTerm {
+    pub id: Ident,
+    pub name: String,
+    pub theory: String,
+    pub children: Vec<Ident>,
+    pub dep_terms: Vec<Ident>,
+    pub resp_inst_line_no: Option<usize>,
+    pub text: String
+}
+impl Print for RcTerm {}
+
+#[derive(Debug, PartialEq, Default)]
 pub struct Quantifier {
     pub num_vars: usize,
     pub name: String,
@@ -107,6 +119,19 @@ impl Quantifier {
         self.name.clone()
     }
 }
+
+#[derive(Debug, PartialEq, Default)]
+pub struct RcQuantifier {
+    pub num_vars: usize,
+    pub name: String,
+    pub term: Rc<RefCell<Term>>,
+    pub cost: f32,
+    pub instances: Vec<usize>,
+    pub vars: Vec<(String, String)>,
+    pub vars_set: bool
+}
+
+
 
 #[derive(Debug, Clone)]
 pub struct Instantiation {

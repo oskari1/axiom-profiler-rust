@@ -1,5 +1,7 @@
 use std::io::Write;
 
+use crate::file_io::open_file_truncate;
+
 pub trait RenderSVG {
     fn make_svg(&self, input_file: &str, output_file: &str) -> String;
 }
@@ -8,15 +10,15 @@ pub struct GraphVizRender;
 impl RenderSVG for GraphVizRender {
     fn make_svg(&self, input_file: &str, output_file: &str) -> String {
         use std::process::Command;
+        println!("Writing to dot");
         let output = Command::new("dot")
                     .arg("-Tsvg")
                     .arg(input_file)
-                    .arg("|")
-                    .arg("tee")
-                    .arg(output_file)
                     .output()
                     .expect("failed to execute process")
                     .stdout;
+        let mut output_file = open_file_truncate(output_file);
+        output_file.write_all(&output).unwrap();
         String::from_utf8_lossy(&output).to_string()
     }
 }
