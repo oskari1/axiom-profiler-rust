@@ -34,7 +34,7 @@ impl LogParser for Z3ParserRc {
             "Finished parsing after {} seconds",
             elapsed_time.as_secs_f32()
         );
-        self.save_output_to_files(&settings, &now);
+        self.save_output_to_files(settings, &now);
         let render_engine = crate::render::GraphVizRender;
         let result = render_engine.make_svg(OUT_FILE_DOT, OUT_FILE_SVG);
         crate::render::add_link_to_svg(OUT_FILE_SVG, OUT_FILE_SVG_2);
@@ -163,7 +163,7 @@ impl Z3LogParser for Z3ParserRc {
             "Finished parsing after {} seconds",
             elapsed_time.as_secs_f32()
         );
-        self.save_output_to_files(&settings, &now);
+        self.save_output_to_files(settings, &now);
         let render_engine = crate::render::GraphVizRender;
         render_engine.make_svg(OUT_FILE_DOT, OUT_FILE_SVG);
         crate::render::add_link_to_svg(OUT_FILE_SVG, OUT_FILE_SVG_2);

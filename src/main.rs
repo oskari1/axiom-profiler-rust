@@ -41,10 +41,8 @@ fn main() {
         if let Err(e) = read_parse.join() {
             println!("{:?}", e);
         };
-    } else {
-        if let Err(e) = parser.read_and_parse_file(&filename, &settings) {
-            println!("{}", e);
-        }
+    } else if let Err(e) = parser.read_and_parse_file(&filename, &settings) {
+        println!("{}", e);
     }
     // let rt = tokio::runtime::Runtime::new().unwrap();
     // rt.block_on(async {futures::join!(timer_async, read_parse_async)});

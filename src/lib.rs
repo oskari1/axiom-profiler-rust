@@ -170,7 +170,7 @@ pub trait Z3LogParser : LogParser {
             "Finished parsing after {} seconds",
             elapsed_time.as_secs_f32()
         );
-        self.save_output_to_files(&settings, &now);
+        self.save_output_to_files(settings, &now);
         let render_engine = crate::render::GraphVizRender;
         render_engine.make_svg(OUT_FILE_DOT, OUT_FILE_SVG);
         crate::render::add_link_to_svg(OUT_FILE_SVG, OUT_FILE_SVG_2);
@@ -246,7 +246,7 @@ impl LogParser for Z3Parser1 {
             "Finished parsing after {} seconds",
             elapsed_time.as_secs_f32()
         );
-        self.save_output_to_files(&settings, &now);
+        self.save_output_to_files(settings, &now);
         let render_engine = crate::render::GraphVizRender;
         let result = render_engine.make_svg(OUT_FILE_DOT, OUT_FILE_SVG);
         crate::render::add_link_to_svg(OUT_FILE_SVG, OUT_FILE_SVG_2);
@@ -714,7 +714,7 @@ impl Z3LogParser for Z3Parser1 {
             now.elapsed().as_secs_f32()
         );
 
-        Z3Parser1::output_to_file(OUT_FILE_INST, &self.instantiations, |_| (), &settings);
+        Z3Parser1::output_to_file(OUT_FILE_INST, &self.instantiations, |_| (), settings);
         println!(
             "Finished printing instantiations ({}) after {} seconds",
             &self.instantiations.len(),
@@ -723,7 +723,7 @@ impl Z3LogParser for Z3Parser1 {
 
         let insts_sorted = Z3Parser1::filter_instantiations_by_cost(&self.instantiations, 250);
         // sorted by cost
-        Z3Parser1::output_to_file_vec("out/inst_by_cost.txt", &insts_sorted, |_| (), &settings);
+        Z3Parser1::output_to_file_vec("out/inst_by_cost.txt", &insts_sorted, |_| (), settings);
         println!(
             "Finished printing cost-sorted instantiations ({}) after {} seconds",
             &self.instantiations.len(),
@@ -750,7 +750,7 @@ impl Z3LogParser for Z3Parser1 {
             now.elapsed().as_secs_f32()
         );
 
-        Z3Parser1::output_to_file_vec(OUT_FILE_DEP, &self.dependencies, |_| (), &settings);
+        Z3Parser1::output_to_file_vec(OUT_FILE_DEP, &self.dependencies, |_| (), settings);
         println!(
             "Finished printing deps ({}) after {} seconds",
             self.dependencies.len(),
@@ -758,14 +758,14 @@ impl Z3LogParser for Z3Parser1 {
         );
 
         let sorted_deps = Self::filter_dependencies_by_cost(&insts_sorted, &self.dependencies);
-        Z3Parser1::output_to_file_vec("out/dep_costs_sorted.txt", &sorted_deps, |_| (), &settings);
+        Z3Parser1::output_to_file_vec("out/dep_costs_sorted.txt", &sorted_deps, |_| (), settings);
         println!(
             "Finished printing cost-sorted deps ({}) after {} seconds",
             self.dependencies.len(),
             now.elapsed().as_secs_f32()
         );
 
-        Z3Parser1::output_to_file(OUT_FILE_EQ, &self.eq_expls, |_| (), &settings);
+        Z3Parser1::output_to_file(OUT_FILE_EQ, &self.eq_expls, |_| (), settings);
         println!(
             "Finished printing eq-expls ({}) after {} seconds",
             self.eq_expls.len(),
@@ -961,11 +961,11 @@ impl Z3Parser1 {
     }
 
     fn filter_dependencies_by_cost(
-        instantiations: &Vec<Instantiation>,
-        dependencies: &Vec<Dependency>,
+        instantiations: &[Instantiation],
+        dependencies: &[Dependency],
     ) -> Vec<Dependency> {
         let inst_set =
-            HashSet::<_>::from_iter(instantiations.iter().map(|inst| inst.line_no).into_iter());
+            HashSet::<_>::from_iter(instantiations.iter().map(|inst| inst.line_no));
         dependencies
             .iter()
             .filter(|dep| inst_set.contains(&dep.to))
