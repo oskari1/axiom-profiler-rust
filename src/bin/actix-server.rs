@@ -27,7 +27,7 @@ async fn parse_file(req_body: String) -> impl Responder {
                 reuses: false,
                 verbose: false,
                 file: "temp.log".to_string(),
-                sort: "cost".to_string(),
+                sort_by: "cost".to_string(),
                 timeout: 0.0,
                 line_limit: usize::MAX
             };
@@ -48,7 +48,7 @@ async fn sample_prototype_call() -> impl Responder {
                 reuses: false,
                 verbose: false,
                 file: "logs/heaps-simpler4.log".to_string(),
-                sort: "cost".to_string(),
+                sort_by: "cost".to_string(),
                 timeout: 0.0,
                 line_limit: usize::MAX
             };
