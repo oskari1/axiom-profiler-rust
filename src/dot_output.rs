@@ -12,8 +12,8 @@ struct InstNode {
 /// Dot representation for each node.
 impl std::fmt::Display for InstNode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // write!(f, "{} [ label=\"{}\", class=\"quant_{}\" ]", self.line_no, self.line_no, self.quant.replace("#", ""))
-        write!(f, "{} [ class=\"quant_{}\" ]", self.line_no, self.quant.replace('#', ""))
+        let quant_id = self.quant.replace('#', "");
+        write!(f, "{} [ class=\"quant_{}\", tooltip=\"quant_{}\" ]", self.line_no, quant_id, self.quant)
     }
 }
 
@@ -45,7 +45,7 @@ fn get_dot(name: &str, node_list: &BTreeSet<InstNode>, edge_list: &BTreeSet<Inst
 
 }
 
-
+/// Filter out theory-solving instantiations
 fn filter_theory_inst(_dep: &Dependency) -> bool {
     _dep.quant != "arith#" && _dep.quant != "basic#"
     // true
@@ -67,15 +67,14 @@ fn build_graph(dependencies: &Vec<Dependency>) -> (BTreeSet<InstNode>, BTreeSet<
     (node_list, edge_list)
 }
 
-// TODO: split into filtering nodes and then filtering edges
+/// Filter `node_list` and `edge_list` so that only the earliest instantiations are displayed.
 fn filter_graph_line_no(node_list: BTreeSet<InstNode>, edge_list: BTreeSet<InstEdge>) -> (BTreeSet<InstNode>, BTreeSet<InstEdge>) {
-    const FILTER_LIMIT: usize = 250;
-    let nodes_to_get = std::cmp::min(FILTER_LIMIT, node_list.len());
-    let node_list_result = Vec::from_iter(node_list)[..nodes_to_get].to_vec();
-    // println!("{:?}", node_list_result.iter().map(|n| n.line_no).collect::<Vec<usize>>());
+    const FILTER_LIMIT: usize = 250;    // TODO: make this a setting
+    let num_nodes_to_get = std::cmp::min(FILTER_LIMIT, node_list.len());
+    let node_list_result = Vec::from_iter(node_list)[..num_nodes_to_get].to_vec();
     let edge_list_result = Vec::from_iter(edge_list);
 
-    // finds "index" of the dependency with the last included instantiation line number
+    // finds "index" of the dependency (edge) with the last included instantiation line number
     // uses property that instantiations are sorted by "to" inst ID
     // include all dependencies up to that one
     let index = edge_list_result.iter()
@@ -87,23 +86,29 @@ fn filter_graph_line_no(node_list: BTreeSet<InstNode>, edge_list: BTreeSet<InstE
     (BTreeSet::from_iter(node_list_result), BTreeSet::from_iter(edge_list_result[..index].to_owned()))
 }
 
-/// Write Dot string to file.
-pub fn output_dot_to_file(dot_filename: &str, css_filename: &str, dependencies: &Vec<Dependency>) {
-    let mut file = open_file_truncate(dot_filename);
-    let (node_list, edge_list) = build_graph(dependencies);
-    let (node_list, edge_list) = filter_graph_line_no(node_list, edge_list);
-    file.write_all(&get_dot("instantiations", &node_list, &edge_list).into_bytes()).expect("failed to write dot file");
+/// Write Dot string of instantiation graph to file, and then a CSS string for quantifier colors.
+pub fn output_dot_and_css_to_file(dot_filename: &str, css_filename: &str, dependencies: &Vec<Dependency>) {
+    let node_list = output_dot_to_file(dot_filename, dependencies);
     output_css_to_file(css_filename, &node_list);
 }
 
-/// Write CSS string to file
+// Turn `dependencies` into a Dot file
+fn output_dot_to_file(filename: &str, dependencies: &Vec<Dependency>) -> BTreeSet<InstNode> {
+    let mut file = open_file_truncate(filename);
+    let (node_list, edge_list) = build_graph(dependencies);
+    let (node_list, edge_list) = filter_graph_line_no(node_list, edge_list);
+    file.write_all(&get_dot("instantiations", &node_list, &edge_list).into_bytes()).expect("failed to write dot file");
+    node_list
+}
+
+/// Build CSS file from `node_list`
 fn output_css_to_file(filename: &str, node_list: &BTreeSet<InstNode>) {
     use crate::css::make_css;
     let mut file = open_file_truncate(filename);
     let quant_set: HashSet<String> = node_list.iter()
     .map(|node| String::from("quant_") + &node.quant.replace('#', ""))
     .collect();
-    let css = make_css::css_string(&quant_set);
+    let css = make_css::make_css_string(&quant_set);
     file.write_all(&css.into_bytes()).expect("failed to write CSS file");
 }
 
@@ -121,8 +126,8 @@ mod tests {
             line_no: 2,
             quant: "ns#B".to_string()
         };
-        assert_eq!(&format!("{}", node1), "1 [ class=\"quant_A\" ]");
-        assert_eq!(&format!("{}", node2), "2 [ class=\"quant_nsB\" ]");
+        assert_eq!(&format!("{}", node1), "1 [ class=\"quant_A\", tooltip=\"quant_#A\" ]");
+        assert_eq!(&format!("{}", node2), "2 [ class=\"quant_nsB\", tooltip=\"quant_ns#B\" ]");
     }
 
     #[test]
@@ -152,8 +157,8 @@ mod tests {
         let edges = BTreeSet::from([edge]);
         assert_eq!(&get_dot("test", &nodes, &edges), 
         r#"digraph test {
-	1 [ class="quant_A" ]
-	2 [ class="quant_nsB" ]
+	1 [ class="quant_A", tooltip="quant_#A" ]
+	2 [ class="quant_nsB", tooltip="quant_ns#B" ]
 	1 -> 2 [ ]
 }
 "#);

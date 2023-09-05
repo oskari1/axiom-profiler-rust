@@ -1,6 +1,8 @@
 use std::{collections::BTreeMap, fs};
 
 use prototype::{file_io, items::{self, EqualityExpl, BlamedTermItem, Instantiation}};
+
+/// Just for testing "cg" equality explanations and finding the explanations they depend on.
 fn main() {
     let mut eq_expls = BTreeMap::new();
     let mut matches = vec![];
@@ -45,24 +47,24 @@ fn main() {
                     }
                     let to = l[semicolon_index + 1].to_string();
                     Congruence {
-                        id,
+                        from: id,
                         arg_eqs: terms,
                         to,
                     }
                     // For each
                 }
                 "th" => Theory {
-                    id,
+                    from: id,
                     theory: l[3].to_string(),
-                    term: l[5].to_string(),
+                    to: l[5].to_string(),
                 },
                 "ax" => Axiom {
-                    id,
-                    term: l[4].to_string(),
+                    from: id,
+                    to: l[4].to_string(),
                 }, // format #A ax ; #B
                 _ => Unknown {
-                    id,
-                    term: l[4].to_string(),
+                    from: id,
+                    to: l[4].to_string(),
                 },
             };
             eq_expls.insert(id_, eq_expl);
@@ -135,9 +137,9 @@ fn get_all_equality_expls<'a>(from_term: &str, to_term: &str, eq_expls: &'a BTre
                 Root { .. } => {break; },
                 Literal { to , .. } => { key = to;},
                 Congruence { to , .. } => { key = to;},
-                Theory { term , .. } => { key = term;},
-                Axiom { term , .. } => { key = term;},
-                Unknown { term , .. } => { key = term;},
+                Theory { to: term , .. } => { key = term;},
+                Axiom { to: term , .. } => { key = term;},
+                Unknown { to: term , .. } => { key = term;},
             }
             if key == to_term {
                 break;
@@ -152,9 +154,9 @@ fn get_all_equality_expls<'a>(from_term: &str, to_term: &str, eq_expls: &'a BTre
                     Root { .. } => {break; },
                     Literal { to , .. } => { key = to;},
                     Congruence { to , .. } => { key = to;},
-                    Theory { term , .. } => { key = term;},
-                    Axiom { term , .. } => { key = term;},
-                    Unknown { term , .. } => { key = term;},
+                    Theory { to: term , .. } => { key = term;},
+                    Axiom { to: term , .. } => { key = term;},
+                    Unknown { to: term , .. } => { key = term;},
                 }
                 if key == from_term {
                     break;

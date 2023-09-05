@@ -1,10 +1,13 @@
 use std::fs::{File, OpenOptions, self};
 use std::io::{self, BufRead, Write, BufWriter};
 use std::path::Path;
+use serde::Deserialize;
 
 use crate::items;
 
-const SETTINGS: &str = "settings.txt";
+/// settings file
+const SETTINGS: &str = "settings.json";
+/// hard-coded write buffer capacity
 const CAPACITY: usize = 1 << 25; // 32 MiB
 
 /// Returns an iterator for the lines of text in a text file.
@@ -24,9 +27,11 @@ pub fn write<T>(file: &mut BufWriter<File>, obj: &T) where T: items::Print {
     file.write_all(obj.format().as_bytes()).expect("write failed");
 }
 
-pub fn pretty_write(file: &mut BufWriter<File>, text: &str) {
+/// Writes `text` to `file`. More general-purpose than `write<T>`.
+/// # Panics
+/// Panics if an error occurs when writing to `file`.
+pub fn write_str(file: &mut BufWriter<File>, text: &str) {
     file.write_all(text.as_bytes()).expect("write failed");
-    // file.write_all("\n".as_bytes()).expect("write failed");
 }
 
 /// Returns a file to write to after creating it (if necessary) and truncating it.
@@ -40,41 +45,34 @@ pub fn open_file_truncate(filename: &str) -> BufWriter<File> {
                     .open(filename).unwrap_or_else(|_| panic!("Error opening {}", filename)))
 }
 
-#[derive(Default, Clone)]
+/// Parsing settings.
+#[derive(Default, Clone, Debug, Deserialize)]
 pub struct Settings {
+    // not all settings currently work
+    /// Name of file to parse.
     pub file: String,
-    pub reuse: bool,
+    /// Whether to consider terms with reused IDs as separate from previous terms with the same ID. Does not work yet.
+    pub reuses: bool,
+    /// Print contents of parser to standard output item by item.
     pub verbose: bool,
-    pub enable_io: bool,
+    /// Whether to print all text/json files (Dot and SVG will always be generated regardless of this setting)
+    pub save_all_data: bool,
+    /// Select a sort type (by line number, cost, depth, etc.)
+    /// Does not work yet.
+    /// ## TODO
+    /// Replace with an enum
+    pub sort_by: String,
+    /// Stop parsing after a certain amount of time. Does not work yet.
     pub timeout: f32,
+    /// Parse only up to a certain number of lines. Does not work yet.
+    pub line_limit: usize,
+    // add settings for:
+    // - number of instantiations to display in final visualization.
 }
 
 
-/// Read settings from `SETTINGS`, saving them to a `Settings`
+/// Read settings from `SETTINGS` json file, saving them to a `Settings` struct
 pub fn get_settings() -> Settings {
     let settings_text = fs::read_to_string(SETTINGS).expect("settings file should exist");
-    let mut settings = Settings::default();
-    for line in settings_text.lines() {
-        let line_split: Vec<&str> = line.split(' ').collect();
-        let (setting_type, value) = (line_split[0], line_split[1]);
-        match setting_type {
-            "FILE" => {
-                settings.file = value.to_string();
-            },
-            "REUSE" => {
-                settings.reuse = value.parse().unwrap();
-            },
-            "VERBOSE" => {
-                settings.verbose = value.parse().unwrap();
-            },
-            "ENABLE_IO" => {
-                settings.enable_io = value.parse().unwrap();
-            },
-            "TIMEOUT" => {
-                settings.timeout = value.parse().unwrap();
-            }
-            _ => {}
-        }
-    }
-    settings
+    serde_json::from_str(&settings_text).expect("Settings file should be valid JSON")
 }

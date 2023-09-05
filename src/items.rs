@@ -2,20 +2,23 @@ use std::cell::RefCell;
 use std::fmt::Debug;
 use std::collections::{HashMap, BTreeMap};
 use std::rc::Rc;
+use serde::{Serialize, Deserialize};
 
-
-/// Trait for pretty printing
+/// Trait for pretty printing data
 pub trait Print: Debug {
-    fn format(&self) -> String where Self: Debug {
+    /// Gets String representation of self.
+    fn format(&self) -> String {
         format!("{:?}\n", self)
     }
 
-    fn print(&self) where Self: Debug {
+    /// Prints self to standard output.
+    fn print(&self) {
         print!("{}", self.format());
     }
 }
 
 #[derive(Debug, Hash, Clone, PartialEq, Eq, PartialOrd, Ord, Default)]
+/// A Z3 term identifier with reuse number. Allows for keeping track of term ID reuses.
 pub struct Ident {
     pub namespace: String,
     pub num: usize,
@@ -23,11 +26,12 @@ pub struct Ident {
 }
 
 impl Print for Ident {
-    fn format(&self) -> String where Self: Debug {
-        format!("{}#{}#{}", self.namespace, self.num, self.reuse_num)
+    fn format(&self) -> String {
+        format!("{}#{}#{}", self.namespace, self.num, self.reuse_num)   // can use .split('#') to get components
     }
 }
 
+/// A Z3 fingerprint with reuse number. Allows for keeping track of pattern/trigger match ID reuses.
 #[derive(Debug, Hash, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Fingerprint {
     fingerprint: u64,
@@ -35,12 +39,13 @@ pub struct Fingerprint {
 }
 
 impl Print for Fingerprint {
-    fn format(&self) -> String where Self: Debug {
+    fn format(&self) -> String {
         format!("({}, {})", self.fingerprint, self.reuse_num)
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Default)]
+/// A Z3 term and associated data.
+#[derive(Debug, Eq, PartialEq, Default, Serialize, Deserialize)]
 pub struct Term {
     pub kind: String,
     pub id: usize,
@@ -49,17 +54,11 @@ pub struct Term {
     pub child_ids: Vec<String>,
     pub dep_term_ids: Vec<String>,
     pub resp_inst_line_no: Option<usize>,
-
-    // pub children: RcVec<Term>,
-    // pub dep_terms: RcVec<Term>,
-    // pub resp_inst: RcOption<Instantiation>,
     pub text: String
 }
 
 impl Print for Term {}
 impl Term {
-    // TODO: see if this can be made more efficient? Memoize text, topological sort?
-    // BUILD text as term is made?
     pub fn pretty_text(&self, map: &TwoDMap<Term>) -> String {
         let child_text: Vec<String> = self.child_ids.iter().map(|c| {
             let term: &Term = map.get(c).unwrap();
@@ -82,10 +81,14 @@ pub struct RcTerm {
     pub dep_terms: Vec<Ident>,
     pub resp_inst_line_no: Option<usize>,
     pub text: String
+    // pub children: RcVec<Term>,
+    // pub dep_terms: RcVec<Term>,
+    // pub resp_inst: RcOption<Instantiation>,
 }
 impl Print for RcTerm {}
 
-#[derive(Debug, PartialEq, Default)]
+/// A Z3 quantifier and associated data.
+#[derive(Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct Quantifier {
     pub num_vars: usize,
     pub name: String,
@@ -131,9 +134,8 @@ pub struct RcQuantifier {
     pub vars_set: bool
 }
 
-
-
-#[derive(Debug, Clone)]
+/// A Z3 instantiation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Instantiation {
     pub line_no: usize,
     pub match_line_no: usize,
@@ -158,13 +160,18 @@ impl Print for Instantiation {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+/// An entry in the blamed term part of a `[new-match]` Z3 trace line.
+/// - Single: standalone identifier.
+/// - Pair: a pair of identifiers grouped in parentheses. (#A #B)
 pub enum BlamedTermItem {
     Single(String),
     Pair(String, String)
 }
 
-/// Splits an ID string into namespace and ID number
+/// Splits an ID string into namespace and ID number.
+/// 0 is used for identifiers without a number 
+/// (usually for theory-solving 'quantifiers' such as "basic#", "arith#")
 pub fn parse_id(s: &str) -> (String, usize) {
     let split: Vec<&str> = s.split('#').collect(); 
     let n =
@@ -180,9 +187,11 @@ pub fn parse_id(s: &str) -> (String, usize) {
     (split[0].to_string(), n)
 }
 
+
+/// A 2D map (Map of containing Maps). The `String` key is the namespace of a term/quantifier
+/// and the `usize` key is the term/quantifier's number.
 #[derive(Debug)]
 pub struct TwoDMap<V>(pub HashMap<String, BTreeMap<usize, V>>);
-// NOTE: maybe replace generic with enum for Term, Quant, etc.
 
 impl<T> Default for TwoDMap<T> {
     fn default() -> Self {
@@ -224,33 +233,7 @@ impl<V> TwoDMap<V> {
         }
     }
 
-    //fn lazy_print(term: Term) {}
 }
-
-// pub fn print_all<T: std::fmt::Debug + Default> (map: &TwoDMap<T>, ns: &str) {
-//     if let Some(ns_map) = map.0.get(ns) {
-//         let mut list: Vec<&String> = ns_map.keys().collect();
-//         list.sort_unstable();
-//         // println!("{:?}", list);
-//         for i in list {
-//             println!("{:?}", ns_map.get(i).expect("None obtained for valid map key?!"));
-//         }
-//     } else {
-//         println!("Namespace {} not in map", ns);
-//     }
-// }
-
-// #[derive(Debug, Default)]
-// pub struct RcHashMap<K, V>(HashMap<K, Rc<RefCell<V>>>);
-
-// #[derive(Debug, Default)]
-// pub struct RcBTreeMap<K, V>(BTreeMap<K, Rc<RefCell<V>>>);
-
-// #[derive(Debug, Default, PartialEq, Eq)]
-// pub struct RcVec<T>(Vec<Rc<RefCell<T>>>);
-
-// #[derive(Debug, Default, PartialEq, Eq)]
-// pub struct RcOption<T>(Option<Rc<RefCell<T>>>);
 
 pub type RcHashMap<K, V> = HashMap<K, Rc<RefCell<V>>>;
 pub type RcBTreeMap<K, V> = BTreeMap<K, Rc<RefCell<V>>>;
@@ -258,15 +241,20 @@ pub type RcVec<T> = Vec<Rc<RefCell<T>>>;
 pub type RcOption<T> = Option<Rc<RefCell<T>>>;
 
 
-#[derive(Debug, Clone)]
+/// The type of dependency between two quantifier instantiations.
+/// - None: no dependency, because an instantiation is not dependent on any others.
+/// - Term: dependency based on a match without equalities.
+/// - Equality: dependency based on an equality.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DepType {
     None,
     Term,
     Equality
 }
 
-
-#[derive(Debug, Clone)]
+/// A dependency between two quantifier instantiations.
+/// `from` can be 0 to represent instatiations with no dependent instantiations.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Dependency {
     pub from: usize,
     pub to: usize,
@@ -282,7 +270,10 @@ impl Print for Dependency {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// A Z3 equality explanation. 
+/// Root represents a term that is a root of its equivalence class.
+/// All other variants represent an equality between two terms and where it came from.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EqualityExpl {
     Root {
         id: String
@@ -293,23 +284,23 @@ pub enum EqualityExpl {
         to: String
     },
     Congruence {
-        id: String,
+        from: String,
         arg_eqs: Vec<(String, String)>,
         to: String
-        // dependent instantiations
+        // add dependent instantiations
     },
     Theory {
-        id: String,
+        from: String,
         theory: String,
-        term: String
+        to: String
     },
     Axiom {
-        id: String,
-        term: String
+        from: String,
+        to: String
     },
     Unknown {
-        id: String,
-        term: String
+        from: String,
+        to: String
     }
 }
 
@@ -319,20 +310,10 @@ impl Print for EqualityExpl {
         match self {
             EqualityExpl::Root { id } => format!("Root {}\n", id),
             EqualityExpl::Literal { from: id, eq: from, to } => format!("Lit. {}: {}, {}\n", id, from, to),
-            EqualityExpl::Congruence { id, arg_eqs: terms, to } => format!("Cong. {}: {:?}, {}\n", id, terms, to),
-            EqualityExpl::Theory { id, theory, term } => format!("Theory {}: {} {}\n", id, theory, term),
-            EqualityExpl::Axiom { id, term } => format!("Axiom {}: {}\n", id, term),
-            EqualityExpl::Unknown { id, term } => format!("Unknown {}: {}\n", id, term),
+            EqualityExpl::Congruence { from: id, arg_eqs: terms, to } => format!("Cong. {}: {:?}, {}\n", id, terms, to),
+            EqualityExpl::Theory { from: id, theory, to: term } => format!("Theory {}: {} {}\n", id, theory, term),
+            EqualityExpl::Axiom { from: id, to: term } => format!("Axiom {}: {}\n", id, term),
+            EqualityExpl::Unknown { from: id, to: term } => format!("Unknown {}: {}\n", id, term),
         }
     }
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::Term;
-
-//     #[test]
-//     fn test_print_basic_term() {
-        
-//     }
-// }

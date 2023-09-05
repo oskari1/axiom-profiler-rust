@@ -28,9 +28,13 @@ Does not distinguish between proofs and apps as they can be processed the same. 
 
 - `[eq-expl]`: records an equality explanation. Needs to determine which type it is.
 root: trivial
+
 th: trivial, as it is based on a theory
+
 lit: based on an explicit = term; can check if = was added to e-graph (`attach-enode`) by an instantiation
+
 cg: need to check each argument equality (pair of terms in parentheses, e.g. `(#A #B)`). Some argument equalities are the same term twice and don't need to be checked; while other equalities may depend on a chain of other `lit`, `cg`, `th` equality explanations. The two terms may not have a direct equality explanation sequence but should at least share the same `root`. This is the most complex case; equality (and hence instantiation) dependencies can be copied recursively.
+
 ax, unknown: not seen
 
 
@@ -71,29 +75,5 @@ Deals with reuse of fingerprints, unused matches, nested instantiations
 - Indirection and "simple types" - Using String IDs to represent terms, line numbers; then trying to do lookups. 
 (Can't hold & references because mutation needed later). Still some trouble because have to borrow entire collections at once.
 - `Rc` and `RefCell`: this may make retrieving and modifying collection (Vec/HashMap/BTreeMap) elements easier, but is also more complicated. Also allows structs to own others that are placed in a collection. May save memory due to not needing clones?
-
-
-
-CG reversal
-
-Collect the argument equalities.
-For each equality (A B),
-    if A == B:
-        continue
-    else:
-        vec[] of equalities
-        find eq-expl for A.
-        while root not reached and term2 != B:
-            save term2 of eq-expl.
-            find eq-expl for term2.
-        if root:
-            [check B]
-        if term2 == B:
-            found all equalities, return
-        else:
-            go through B's equalities until root found or A found.
-            [A A2 A3 ... root]
-            [B B2 B3 ... root]
-            Join together [A A2 A3 root B3 B2 B]
 
 
