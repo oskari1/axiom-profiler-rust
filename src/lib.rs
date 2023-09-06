@@ -13,7 +13,7 @@ mod css;
 /// Generates Dot output from instantiation information.
 mod dot_output;
 
-/// Manages different sorting/filtering functionality (currently unused).
+/// Manages different sorting/filtering functionality (currently empty).
 mod sort_filter;
 
 /// Parser structs and methods.
