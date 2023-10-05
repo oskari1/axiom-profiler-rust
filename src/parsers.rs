@@ -1,3 +1,4 @@
+use std::error::Error;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use std::collections::{HashMap, BTreeMap, HashSet};
@@ -50,6 +51,11 @@ const OUT_DEP_SORTED_JSON: &str = "out/deps_sorted.json";
 const OUT_TERMS_JSON: &str = "out/terms.json";
 const OUT_EQ_JSON: &str = "out/eq_expls.json";
 
+pub enum Log {
+    Filename(String),
+    File(String)
+}
+
 /// Trait for a generic SMT solver trace parser. Intended to support different solvers or log formats. 
 pub trait LogParser {
     /// Parse given file with given settings
@@ -67,6 +73,12 @@ pub trait LogParser {
     fn should_continue(&self) -> bool {
         true
     }
+
+    /// Parse given log represented as a String
+    fn process_log(
+        &mut self,
+        log: String,
+    ) -> String;
 }
 
 pub trait Interruptable {
@@ -106,92 +118,112 @@ pub trait Z3LogParser: LogParser {
     fn conflict(&mut self, _l: &[&str]) {}
 
     /// Parses log data line by line.
-    fn main_parse_loop(&mut self, filename: &str) {
-        if let Ok(lines) = read_lines(filename) {
-            for (line_no, line) in lines.enumerate() {
-                if !self.should_continue() {
-                    println!("Interrupted");
-                    break;
+    fn main_parse_loop(&mut self, log: Log) {
+        match log {
+            Log::Filename(filename) => {
+                if let Ok(lines) = read_lines(filename) {
+                    for (line_no, line) in lines.enumerate() {
+                        if !self.should_continue() {
+                            println!("Interrupted");
+                            break;
+                        }
+                        let l0 = line.unwrap_or_else(|_| panic!("Error reading line {}", line_no));
+                        match self.process_line(l0, line_no) {
+                            Ok(()) => continue,
+                            Err(_) => break,
+                        }
+                    }
+                } else {
+                    panic!("Failed reading lines")
                 }
-                let l0 = line.unwrap_or_else(|_| panic!("Error reading line {}", line_no));
-                let l: Vec<&str> = l0.split(' ').collect();
-                match l[0] {
-                    // match the line case
-                    "[tool-version]" => {
-                        self.version_info(&l);
+            },
+            Log::File(file) => {
+                for (line_no, line) in file.lines().enumerate() {
+                    match self.process_line(line.to_string(), line_no) {
+                        Ok(()) => continue,
+                        Err(_) => break,
                     }
-                    "[mk-quant]" | "[mk-lambda]" => {
-                        self.mk_quant(&l);
-                    }
-                    "[mk-var]" => {
-                        self.mk_var(&l);
-                    }
-                    "[mk-proof]" | "[mk-app]" => {
-                        self.mk_proof_app(&l);
-                    }
-                    "[attach-meaning]" => {
-                        self.attach_meaning(&l);
-                    }
-                    "[attach-var-names]" => {
-                        self.attach_vars(&l, &l0);
-                    }
-                    "[attach-enode]" => {
-                        self.attach_enode(&l);
-                    }
-                    "[eq-expl]" => {
-                        self.eq_expl(&l);
-                    }
-                    "[new-match]" => {
-                        self.new_match(&l, line_no);
-                    }
-                    "[inst-discovered]" => {
-                        self.inst_discovered(&l, line_no, &l0);
-                    }
-                    "[instance]" => {
-                        self.instance(&l, line_no);
-                    }
-                    "[end-of-instance]" => {
-                        self.end_of_instance();
-                    }
-                    "[decide-and-or]" => {
-                        self.decide_and_or(&l);
-                    }
-                    "[decide]" => {
-                        self.decide(&l);
-                    }
-                    "[assign]" => {
-                        self.assign(&l);
-                    }
-                    "[push]" => {
-                        self.push(&l);
-                    }
-                    "[pop]" => {
-                        self.pop(&l);
-                    }
-                    "[begin-check]" => {
-                        self.begin_check(&l);
-                    }
-                    "[query-done]" => {
-                        self.query_done(&l);
-                    }
-                    "[eof]" => {
-                        break;
-                    }
-                    "[resolve-process]" => {
-                        self.resolve_process(&l);
-                    }
-                    "[resolve-lit]" => {
-                        self.resolve_lit(&l);
-                    }
-                    "[conflict]" => {
-                        self.conflict(&l);
-                    }
-                    _ => println!("Unknown line case: {}", l0),
                 }
             }
-        } else {
-            panic!("Failed reading lines")
+        } 
+    } 
+
+    fn process_line(&mut self, line: String, line_no: usize) -> Result<(),Box<dyn Error>> {
+        let l: Vec<&str> = line.split(' ').collect();
+        match l[0] {
+            // match the line case
+            "[tool-version]" => {
+                self.version_info(&l);
+            }
+            "[mk-quant]" | "[mk-lambda]" => {
+                self.mk_quant(&l);
+            }
+            "[mk-var]" => {
+                self.mk_var(&l);
+            }
+            "[mk-proof]" | "[mk-app]" => {
+                self.mk_proof_app(&l);
+            }
+            "[attach-meaning]" => {
+                self.attach_meaning(&l);
+            }
+            "[attach-var-names]" => {
+                self.attach_vars(&l, &line);
+            }
+            "[attach-enode]" => {
+                self.attach_enode(&l);
+            }
+            "[eq-expl]" => {
+                self.eq_expl(&l);
+            }
+            "[new-match]" => {
+                self.new_match(&l, line_no);
+            }
+            "[inst-discovered]" => {
+                self.inst_discovered(&l, line_no, &line);
+            }
+            "[instance]" => {
+                self.instance(&l, line_no);
+            }
+            "[end-of-instance]" => {
+                self.end_of_instance();
+            }
+            "[decide-and-or]" => {
+                self.decide_and_or(&l);
+            }
+            "[decide]" => {
+                self.decide(&l);
+            }
+            "[assign]" => {
+                self.assign(&l);
+            }
+            "[push]" => {
+                self.push(&l);
+            }
+            "[pop]" => {
+                self.pop(&l);
+            }
+            "[begin-check]" => {
+                self.begin_check(&l);
+            }
+            "[query-done]" => {
+                self.query_done(&l);
+            }
+            "[eof]" => {
+                return Err(From::from("[eof]"));
+            }
+            "[resolve-process]" => {
+                self.resolve_process(&l);
+            }
+            "[resolve-lit]" => {
+                self.resolve_lit(&l);
+            }
+            "[conflict]" => {
+                self.conflict(&l);
+            }
+            _ => println!("Unknown line case: {}", line),
         }
+        Ok(())
     }
 
     /// Handles parsing, saves results to file, and outputs the final graph.
@@ -199,7 +231,7 @@ pub trait Z3LogParser: LogParser {
     fn process_z3_file(&mut self, filename: &str, settings: &Settings) -> Result<(String,), String> {
         let time = Instant::now();
 
-        self.main_parse_loop(filename);
+        self.main_parse_loop(Log::Filename(filename.to_string()));
 
         let elapsed_time = time.elapsed();
         println!(
@@ -219,6 +251,11 @@ pub trait Z3LogParser: LogParser {
         println!("Done, run took {} seconds.", elapsed_time.as_secs_f32());
 
         Ok((svg_result, ))
+    }
+
+    fn process_z3_log(&mut self, log: String) -> String {
+        self.main_parse_loop(Log::File(log));
+        String::new()
     }
     /// Save contents of parser to files.
     fn save_output_to_files(&mut self, settings: &Settings, time: &Instant);

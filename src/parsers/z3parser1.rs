@@ -40,6 +40,13 @@ impl LogParser for Z3Parser1 {
             }
     }
 
+    fn process_log(
+        &mut self,
+        log: String,
+    ) -> String {
+        self.process_z3_log(log)
+    }
+
 }
 
 impl Interruptable for Z3Parser1 {
