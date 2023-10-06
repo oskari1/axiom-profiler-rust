@@ -78,7 +78,9 @@ pub trait LogParser {
     fn process_log(
         &mut self,
         log: String,
-    ) -> String;
+    );
+
+    fn get_dependencies(&self) -> &Vec<Dependency>;
 }
 
 pub trait Interruptable {
@@ -253,9 +255,8 @@ pub trait Z3LogParser: LogParser {
         Ok((svg_result, ))
     }
 
-    fn process_z3_log(&mut self, log: String) -> String {
+    fn process_z3_log(&mut self, log: String) {
         self.main_parse_loop(Log::File(log));
-        String::new()
     }
     /// Save contents of parser to files.
     fn save_output_to_files(&mut self, settings: &Settings, time: &Instant);

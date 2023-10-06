@@ -1,5 +1,4 @@
 use std::{io::Write, collections::{BTreeSet, HashSet}};
-
 use crate::{file_io::open_file_truncate, items::Dependency};
 
 /// A node representing a quantifier instantiation.

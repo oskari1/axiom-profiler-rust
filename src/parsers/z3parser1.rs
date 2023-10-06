@@ -43,8 +43,12 @@ impl LogParser for Z3Parser1 {
     fn process_log(
         &mut self,
         log: String,
-    ) -> String {
+    ) {
         self.process_z3_log(log)
+    }
+
+    fn get_dependencies(&self) -> &Vec<Dependency> {
+        &self.dependencies
     }
 
 }
