@@ -50,7 +50,6 @@ impl LogParser for Z3Parser1 {
     fn get_dependencies(&self) -> &Vec<Dependency> {
         &self.dependencies
     }
-
 }
 
 impl Interruptable for Z3Parser1 {
@@ -795,5 +794,15 @@ impl Z3Parser1 {
             file.flush().unwrap();
             file2.flush().unwrap();
         }
+    }
+
+    pub fn get_sorted_dependencies(&self) -> Vec<Dependency> {
+        let insts_sorted = Z3Parser1::filter_instantiations_by_cost(&self.instantiations, 250);
+        Self::filter_dependencies_by_cost(&insts_sorted, &self.dependencies)
+    } 
+
+    pub fn get_dot_output_as_string(&self) -> String {
+        let sorted_deps = self.get_sorted_dependencies();
+        crate::dot_output::get_dot_output_as_string(&sorted_deps)
     }
 }
