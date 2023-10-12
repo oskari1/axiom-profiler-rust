@@ -230,7 +230,7 @@ pub trait Z3LogParser: LogParser {
 
     /// Handles parsing, saves results to file, and outputs the final graph.
     /// Used to implement `LogParser::process_file` for a `Z3Parser`.
-    fn process_z3_file(&mut self, filename: &str, settings: &Settings) -> Result<(String,), String> {
+fn process_z3_file(&mut self, filename: &str, settings: &Settings) -> Result<(String,), String> {
         let time = Instant::now();
 
         self.main_parse_loop(Log::Filename(filename.to_string()));
